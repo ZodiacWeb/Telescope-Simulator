@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telescope Sim V13 - Fixed Cartoon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #09090e;
+            --bg-gradient: linear-gradient(135deg, #0f111a 0%, #1a1a2e 100%);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-cyan: #00f2fe;
+            --accent-purple: #9b51e0;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        header { text-align: center; margin-bottom: 20px; }
+        header h1 {
+            font-size: 28px; font-weight: 600; margin-bottom: 5px;
+            background: -webkit-linear-gradient(45deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-shadow: 0px 4px 20px rgba(0, 242, 254, 0.2);
+        }
+        header .author {
+            font-size: 16px; color: var(--accent-cyan); font-weight: 400; letter-spacing: 1px;
+        }
+
+        .container { display: flex; flex-direction: column; gap: 20px; max-width: 1250px; margin: 0 auto; width: 100%; }
+
+        @media (min-width: 992px) {
+            .container { flex-direction: row; align-items: stretch; height: calc(100vh - 120px); }
+            .left-panel { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; }
+            .right-panel { flex: 1; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding-right: 10px; }
+        }
+
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border); border-radius: 24px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .menu-title { font-size: 16px; color: var(--text-muted); margin-bottom: 15px; text-align: center; font-weight: 500; }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        @media (min-width: 992px) { .menu-grid { grid-template-columns: 1fr; } }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); color: var(--text-main);
+            padding: 14px 15px; border-radius: 16px; cursor: pointer; font-family: inherit; font-size: 15px;
+            font-weight: 400; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            display: flex; align-items: center; justify-content: center; gap: 15px;
+        }
+        .menu-btn:hover { background: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
+        .menu-btn.active {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(155, 81, 224, 0.2));
+            border-color: var(--accent-cyan); box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); font-weight: 500;
+        }
+        .emoji { font-size: 24px; flex-shrink: 0; width: 30px; text-align: center; }
+        .btn-text { text-align: left; line-height: 1.3; width: 140px; }
+
+        .cartoon-container {
+            margin-top: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 20px;
+            opacity: 0.9;
+        }
+
+        .sim-view {
+            position: relative; height: 350px; min-height: 350px; display: flex; justify-content: center;
+            align-items: center; overflow: hidden; background: radial-gradient(circle at center, #1a1a2e 0%, #09090e 100%);
+        }
+        .sim-badge {
+            position: absolute; top: 15px; left: 20px; background: rgba(0, 0, 0, 0.5); padding: 5px 12px;
+            border-radius: 20px; font-size: 13px; color: var(--accent-cyan); border: 1px solid rgba(0, 242, 254, 0.3); z-index: 10;
+        }
+
+        /* FIXED: Apply display none ONLY to simulation SVGs, not the cartoon! */
+        .sim-view svg { width: 100%; height: 100%; max-width: 800px; display: none; }
+        .sim-view svg.active { display: block; }
+        
+        .telescope-body { fill: rgba(255,255,255,0.02); stroke: #475569; stroke-width: 2.5; }
+        .lens { fill: url(#lensGrad); stroke: #00f2fe; stroke-width: 2; }
+        .mirror { fill: none; stroke: #e2e8f0; stroke-width: 5; stroke-linecap: round; filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)); }
+        
+        .chandra-mirror {
+            stroke: #fff; stroke-width: 4; stroke-linecap: round;
+            filter: drop-shadow(0 0 6px rgba(255,255,255,0.9));
+        }
+        
+        .ray-base { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+        .ray-base.yellow { stroke: rgba(253, 224, 71, 0.3); }
+        .ray-base.purple { stroke: rgba(192, 132, 252, 0.3); }
+        .ray-base.green { stroke: rgba(74, 222, 128, 0.2); }
+        .ray-base.cyan { stroke: rgba(0, 242, 254, 0.3); }
+
+        .ray-pulse { fill: none; stroke-width: 3; stroke-linecap: round; filter: drop-shadow(0 0 6px currentColor); }
+        .ray-pulse.yellow { stroke: #fde047; }
+        .ray-pulse.purple { stroke: #c084fc; }
+        .ray-pulse.green { stroke: #4ade80; stroke-dasharray: 10 15; }
+        .ray-pulse.cyan { stroke: #00f2fe; }
+
+        .anim-flow { stroke-dasharray: 30 1500; stroke-dashoffset: 1500; animation: flow 3s linear infinite; }
+        .anim-flow-fast { stroke-dasharray: 15 30; stroke-dashoffset: 1000; animation: flow 1.5s linear infinite; }
+        @keyframes flow { 0% { stroke-dashoffset: 1500; } 100% { stroke-dashoffset: 0; } }
+
+        .radio-pulse { animation: ripple 2s linear infinite; transform-origin: 400px 180px; }
+        .radio-pulse:nth-child(2) { animation-delay: 0.6s; }
+        .radio-pulse:nth-child(3) { animation-delay: 1.2s; }
+        @keyframes ripple { 0% { r: 0; opacity: 1; stroke-width: 3; } 100% { r: 100px; opacity: 0; stroke-width: 1; } }
+
+        .hover-anim { animation: float 4s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .info-title { font-size: 24px; font-weight: 600; margin-bottom: 15px; color: #fff; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .badge-tag { font-size: 13px; padding: 4px 12px; border-radius: 12px; font-weight: 500; }
+        .tag-earth { background: rgba(74, 222, 128, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
+        .tag-space { background: rgba(192, 132, 252, 0.15); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.3); }
+
+        .info-content { display: flex; flex-direction: column; gap: 15px; }
+        .info-card { background: rgba(0,0,0,0.2); border-radius: 16px; padding: 15px; border: 1px solid rgba(255,255,255,0.05); }
+        .info-card h3 { font-size: 15px; color: var(--accent-cyan); margin-bottom: 5px; font-weight: 500; }
+        .info-card p { font-size: 15px; line-height: 1.6; color: #cbd5e1; font-weight: 300; }
+        .highlight { color: #fff; font-weight: 400; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>✨ Space Optics Simulator</h1>
+        <div class="author">By Phatthanadet</div>
+    </header>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="left-panel glass-panel">
+            <div class="menu-title">เลือกประเภทกล้อง</div>
+            <div class="menu-grid">
+                <button class="menu-btn active" onclick="selectTelescope(this, 'refracting')">
+                    <span class="emoji">🔭</span> 
+                    <span class="btn-text">1. กล้องโทรทรรศน์<br>ชนิดหักเหแสง</span>
+                </button>
+                <button class="menu-btn" onclick="selectTelescope(this, 'reflecting')">
+                    <span class="emoji">🪞</span>
+                    <span class="btn-text">2. กล้องโทรทรรศน์<br>ชนิดสะท้อนแสง</span>
+                </button>
+                <button class="menu-btn" onclick="selectTelescope(this, 'catadioptric')">
+                    <span class="emoji">🔄</span>
+                    <span class="btn-text">3. กล้องโทรทรรศน์<br>ชนิดผสม</span>
+                </button>
+                <button class="menu-btn" onclick="selectTelescope(this, 'radio')">
+                    <span class="emoji">📡</span>
+                    <span class="btn-text">4. กล้องโทรทรรศน์<br>วิทยุ</span>
+                </button>
+                <button class="menu-btn" onclick="selectTelescope(this, 'space')">
+                    <span class="emoji">🛰️</span>
+                    <span class="btn-text">5. กล้องโทรทรรศน์<br>อวกาศ</span>
+                </button>
+                <button class="menu-btn" onclick="selectTelescope(this, 'chandra')">
+                    <span class="emoji">⚛️</span>
+                    <span class="btn-text">6. กล้องโทรทรรศน์<br>อวกาศจันทรา</span>
+                </button>
+            </div>
+
+            <!-- Cute Astronaut Cartoon -->
+            <div class="cartoon-container">
+                <!-- Ensure display is block so it shows up -->
+                <svg viewBox="0 0 200 180" width="100%" height="150" style="display: block;" xmlns="http://www.w3.org/2000/svg">
+                    <style>
+                        .twinkle { animation: blink 2s infinite ease-in-out; }
+                        .twinkle-2 { animation: blink 3s infinite ease-in-out; animation-delay: 1s; }
+                        @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+                        .float-astro { animation: floating 4s infinite ease-in-out; }
+                        @keyframes floating { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+                    </style>
+                    <!-- Stars Background -->
+                    <circle cx="40" cy="30" r="2" fill="#fde047" class="twinkle"/>
+                    <circle cx="160" cy="40" r="2.5" fill="#fde047" class="twinkle-2"/>
+                    <circle cx="90" cy="20" r="1.5" fill="#fde047" class="twinkle"/>
+                    <circle cx="150" cy="90" r="2" fill="#fde047" class="twinkle-2"/>
+                    <circle cx="30" cy="100" r="1.5" fill="#fde047" class="twinkle"/>
+                    
+                    <g class="float-astro">
+                        <!-- Tripod -->
+                        <line x1="90" y1="120" x2="65" y2="180" stroke="#64748b" stroke-width="4" stroke-linecap="round"/>
+                        <line x1="90" y1="120" x2="115" y2="180" stroke="#64748b" stroke-width="4" stroke-linecap="round"/>
+                        <line x1="90" y1="120" x2="90" y2="180" stroke="#475569" stroke-width="4" stroke-linecap="round"/>
+                        <circle cx="90" cy="120" r="5" fill="#94a3b8" />
+
+                        <!-- Telescope Tube pointing up-right -->
+                        <g transform="translate(90, 120) rotate(35)">
+                            <rect x="-15" y="-55" width="30" height="70" rx="5" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+                            <!-- Stripes -->
+                            <rect x="-14" y="-35" width="28" height="8" fill="#38bdf8" />
+                            <!-- Eyepiece -->
+                            <rect x="-5" y="15" width="10" height="15" rx="2" fill="#94a3b8" />
+                            <!-- Lens Glass -->
+                            <rect x="-12" y="-60" width="24" height="6" rx="2" fill="#0ea5e9" />
+                        </g>
+
+                        <!-- Cute Astronaut (Looking right into the telescope) -->
+                        <g transform="translate(50, 140)">
+                            <!-- Backpack -->
+                            <rect x="-15" y="5" width="12" height="30" rx="4" fill="#cbd5e1" />
+                            <!-- Body -->
+                            <rect x="-5" y="0" width="28" height="38" rx="10" fill="#f8fafc" />
+                            <!-- Arm holding telescope -->
+                            <path d="M 10 15 Q 30 10 35 -15" fill="none" stroke="#f8fafc" stroke-width="8" stroke-linecap="round" />
+                            <!-- Head / Helmet -->
+                            <circle cx="10" cy="-15" r="22" fill="#f8fafc" />
+                            <!-- Visor -->
+                            <path d="M 0 -20 Q 25 -30 28 -5 Q 0 5 0 -20" fill="#0f172a" />
+                            <!-- Visor Reflection -->
+                            <path d="M 5 -16 Q 20 -22 22 -6" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="right-panel">
+            <div class="sim-view glass-panel">
+                <div class="sim-badge">Live Simulation 🟢</div>
+                
+                <svg style="display:none;">
+                    <defs>
+                        <linearGradient id="lensGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="rgba(0, 242, 254, 0.4)" />
+                            <stop offset="100%" stop-color="rgba(0, 242, 254, 0.05)" />
+                        </linearGradient>
+                        <radialGradient id="earthGrad" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#0ea5e9"/>
+                            <stop offset="80%" stop-color="#0369a1"/>
+                            <stop offset="100%" stop-color="#020617"/>
+                        </radialGradient>
+                        <linearGradient id="hubBody" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stop-color="#f1f5f9"/>
+                            <stop offset="50%" stop-color="#94a3b8"/>
+                            <stop offset="100%" stop-color="#475569"/>
+                        </linearGradient>
+                        <linearGradient id="hubPanel" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#38bdf8"/>
+                            <stop offset="100%" stop-color="#0284c7"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+
+                <!-- 1. Refracting -->
+                <svg id="svg-refracting" class="active" viewBox="0 0 800 350">
+                    <path class="telescope-body" d="M 200,100 L 600,150 L 600,200 L 200,250 Z" />
+                    <path class="telescope-body" d="M 600,165 L 700,165 L 700,185 L 600,185 Z" />
+                    <ellipse cx="200" cy="175" rx="15" ry="75" class="lens" />
+                    <ellipse cx="650" cy="175" rx="5" ry="20" class="lens" />
+                    <path class="ray-base yellow" d="M 0,120 L 200,120 L 600,175 L 700,170" />
+                    <path class="ray-base yellow" d="M 0,230 L 200,230 L 600,175 L 700,180" />
+                    <path class="ray-base yellow" d="M 0,175 L 200,175 L 600,175 L 700,175" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,120 L 200,120 L 600,175 L 700,170" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,230 L 200,230 L 600,175 L 700,180" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,175 L 200,175 L 600,175 L 700,175" />
+                </svg>
+
+                <!-- 2. Reflecting -->
+                <svg id="svg-reflecting" viewBox="0 0 800 350">
+                    <path class="telescope-body" d="M 150,100 L 650,100 L 650,250 L 150,250" />
+                    <path class="mirror" d="M 620,105 Q 650,175 620,245" />
+                    <line x1="285" y1="150" x2="335" y2="200" class="mirror" />
+                    <path class="telescope-body" d="M 295,100 L 295,40 L 325,40 L 325,100" />
+                    <path class="ray-base yellow" d="M 0,130 L 637,130 L 300,165 L 313,40" />
+                    <path class="ray-base yellow" d="M 0,220 L 637,220 L 320,185 L 304,40" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,130 L 637,130 L 300,165 L 313,40" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,220 L 637,220 L 320,185 L 304,40" />
+                </svg>
+
+                <!-- 3. Catadioptric -->
+                <svg id="svg-catadioptric" viewBox="0 0 800 350">
+                    <!-- Main Tube -->
+                    <path class="telescope-body" d="M 200,100 L 600,100 L 600,250 L 200,250 Z" />
+                    
+                    <!-- Corrector Plate -->
+                    <path class="lens" d="M 200,100 Q 210,137 200,175 Q 210,212 200,250 L 185,250 L 185,100 Z" />
+                    
+                    <!-- Secondary Mirror Block -->
+                    <path fill="#0284c7" d="M 195,145 L 205,145 Q 220,175 205,205 L 195,205 Z" opacity="0.9" />
+                    <path class="mirror" d="M 205,145 Q 220,175 205,205" />
+                    
+                    <!-- Primary Mirror (Concave with hole) -->
+                    <path class="mirror" d="M 590,100 Q 615,125 590,150" />
+                    <path class="mirror" d="M 590,200 Q 615,225 590,250" />
+                    
+                    <!-- Eyepiece Tube -->
+                    <path class="telescope-body" d="M 600,150 L 680,150 L 680,200 L 600,200" />
+                    
+                    <!-- Eyepiece Lenses -->
+                    <ellipse cx="630" cy="175" rx="5" ry="20" class="lens" />
+                    <ellipse cx="660" cy="175" rx="5" ry="20" class="lens" />
+                    
+                    <!-- Top Ray -->
+                    <path class="ray-base yellow" d="M 0,120 L 200,120 L 597,120 L 216,160 L 630,185 L 660,185 L 700,185" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,120 L 200,120 L 597,120 L 216,160 L 630,185 L 660,185 L 700,185" />
+                    
+                    <!-- Bottom Ray -->
+                    <path class="ray-base yellow" d="M 0,230 L 200,230 L 597,230 L 216,190 L 630,165 L 660,165 L 700,165" />
+                    <path class="ray-pulse yellow anim-flow" d="M 0,230 L 200,230 L 597,230 L 216,190 L 630,165 L 660,165 L 700,165" />
+                </svg>
+
+                <!-- 4. Radio -->
+                <svg id="svg-radio" viewBox="0 0 800 350">
+                    <path class="mirror" d="M 200,50 Q 400,300 600,50" />
+                    <line x1="300" y1="100" x2="400" y2="180" class="telescope-body" />
+                    <line x1="500" y1="100" x2="400" y2="180" class="telescope-body" />
+                    <path class="telescope-body" d="M 380,240 L 420,240 L 450,330 L 350,330 Z" />
+                    <path class="ray-base green" d="M 300,0 L 300,100 L 400,180" />
+                    <path class="ray-base green" d="M 400,0 L 400,150 L 400,180" />
+                    <path class="ray-base green" d="M 500,0 L 500,100 L 400,180" />
+                    <circle cx="400" cy="180" r="5" fill="#4ade80" />
+                    <circle class="ray-pulse green radio-pulse" cx="400" cy="180" r="0" fill="none" />
+                    <circle class="ray-pulse green radio-pulse" cx="400" cy="180" r="0" fill="none" />
+                </svg>
+
+                <!-- 5. Space -->
+                <svg id="svg-space" viewBox="0 0 800 350">
+                    <!-- Earth -->
+                    <circle cx="400" cy="650" r="350" fill="url(#earthGrad)" />
+                    
+                    <!-- Orbit Path -->
+                    <ellipse cx="400" cy="350" rx="350" ry="270" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="2" stroke-dasharray="15 15" />
+
+                    <!-- Ground Station -->
+                    <path d="M 385,320 L 415,320 L 400,300 Z" fill="#38bdf8" opacity="0.9"/>
+                    <circle cx="400" cy="300" r="5" fill="#fff" filter="drop-shadow(0 0 6px #fff)"/>
+                    <text x="430" y="315" fill="rgba(255,255,255,0.7)" font-size="12">สถานีภาคพื้นโลก (Ground Station)</text>
+
+                    <!-- Hovering Satellite Group -->
+                    <g class="hover-anim">
+                        
+                        <!-- Downlink Signal to Earth from the center -->
+                        <path class="ray-base cyan" stroke-dasharray="10 10" d="M 400, 150 L 400, 300" />
+                        <path class="ray-pulse cyan anim-flow-fast" stroke-dasharray="10 10" d="M 400, 150 L 400, 300" />
+
+                        <!-- Rotated Hubble Telescope Group (Points Top-Left) -->
+                        <g transform="translate(420, 150) rotate(35)">
+                            
+                            <!-- Incoming Starlight (Cone converging into the aperture at x=-100) -->
+                            <polygon points="-400,-20 -100,-20 -100,20 -400,20" fill="rgba(253, 224, 71, 0.04)" />
+                            
+                            <!-- Multiple Rays focusing into the aperture -->
+                            <path class="ray-base yellow" d="M -400, -15 L -100, -15" />
+                            <path class="ray-pulse yellow anim-flow" d="M -400, -15 L -100, -15" />
+                            
+                            <path class="ray-base yellow" d="M -400, 0 L -100, 0" />
+                            <path class="ray-pulse yellow anim-flow" style="animation-delay: 0.5s" d="M -400, 0 L -100, 0" />
+                            
+                            <path class="ray-base yellow" d="M -400, 15 L -100, 15" />
+                            <path class="ray-pulse yellow anim-flow" style="animation-delay: 1.0s" d="M -400, 15 L -100, 15" />
+                            
+                            <!-- Solar Panels (Angled straight up and down) -->
+                            <!-- Top Panel -->
+                            <polygon points="-30,-25 -30,-120 10,-120 10,-25" fill="url(#hubPanel)" stroke="#38bdf8" stroke-width="2" stroke-linejoin="round" />
+                            <line x1="-10" y1="-25" x2="-10" y2="-120" stroke="#38bdf8" stroke-width="1.5" opacity="0.6"/>
+                            <line x1="-30" y1="-72" x2="10" y2="-72" stroke="#38bdf8" stroke-width="1.5" opacity="0.6"/>
+
+                            <!-- Bottom Panel -->
+                            <polygon points="-30,25 -30,120 10,120 10,25" fill="url(#hubPanel)" stroke="#38bdf8" stroke-width="2" stroke-linejoin="round" />
+                            <line x1="-10" y1="25" x2="-10" y2="120" stroke="#38bdf8" stroke-width="1.5" opacity="0.6"/>
+                            <line x1="-30" y1="72" x2="10" y2="72" stroke="#38bdf8" stroke-width="1.5" opacity="0.6"/>
+
+                            <!-- Main Spacecraft Body (Cylinder) -->
+                            <rect x="-100" y="-25" width="160" height="50" rx="6" fill="url(#hubBody)" stroke="#cbd5e1" stroke-width="2" />
+                            
+                            <!-- Segments / Details on Body -->
+                            <path d="M -60,-25 L -60,25 M -20,-25 L -20,25 M 20,-25 L 20,25" stroke="#cbd5e1" stroke-width="2" opacity="0.5" />
+                            
+                        </g>
+                    </g>
+                </svg>
+
+                <!-- 6. Chandra -->
+                <svg id="svg-chandra" viewBox="0 0 800 350">
+                    <path class="telescope-body" stroke-dasharray="10 5" d="M 150,90 L 650,130 L 650,220 L 150,260 Z" />
+                    <rect x="200" y="150" width="15" height="50" fill="#475569" rx="4" />
+                    <rect x="630" y="150" width="40" height="50" fill="#9b51e0" rx="6" filter="drop-shadow(0 0 15px #9b51e0)" />
+                    <line x1="200" y1="110" x2="400" y2="135" class="chandra-mirror" />
+                    <line x1="200" y1="125" x2="400" y2="150" class="chandra-mirror" />
+                    <line x1="200" y1="225" x2="400" y2="200" class="chandra-mirror" />
+                    <line x1="200" y1="240" x2="400" y2="215" class="chandra-mirror" />
+                    <path class="ray-base purple" d="M 0,117 L 300,122.5 L 635, 170" />
+                    <path class="ray-pulse purple anim-flow" d="M 0,117 L 300,122.5 L 635, 170" />
+                    <path class="ray-base purple" d="M 0,233 L 300,227.5 L 635, 180" />
+                    <path class="ray-pulse purple anim-flow" d="M 0,233 L 300,227.5 L 635, 180" />
+                </svg>
+            </div>
+
+            <!-- Info View -->
+            <div class="info-view glass-panel">
+                <h2 class="info-title">
+                    <span id="info-title">🔭 1. กล้องโทรทรรศน์ชนิดหักเหแสง</span>
+                    <span id="info-badge" class="badge-tag tag-earth">ใช้งานบนพื้นโลก 🌍</span>
+                </h2>
+                <div class="info-content">
+                    <div class="info-card"><h3>⚙️ หลักการทำงาน</h3><p id="info-principle">ใช้ <span class="highlight">เลนส์นูน</span> รวมแสงให้ตกกระทบที่จุดโฟกัส แล้วใช้เลนส์ตาขยายภาพให้ใหญ่ขึ้น</p></div>
+                    <div class="info-card"><h3>✅ ข้อดี & ❌ ข้อเสีย</h3><p><span class="highlight">ข้อดี:</span> <span id="info-pros">ภาพคมชัด คอนทราสต์สูง ลำกล้องเป็นระบบปิดฝุ่นไม่เข้า</span></p><p style="margin-top: 8px;"><span class="highlight">ข้อเสีย:</span> <span id="info-cons">เกิดความคลาดสี (ขอบภาพสีรุ้ง) หน้ากล้องใหญ่จะทำให้ตัวกล้องยาวและหนักมาก</span></p></div>
+                    <div class="info-card"><h3>💰 ราคา & การบำรุงรักษา</h3><p id="info-price">เริ่มต้นหลักพันถึงหลักแสนบาท <span class="highlight">บำรุงรักษาง่ายมาก</span></p></div>
+                    <div class="info-card"><h3>🎯 เหมาะกับใคร?</h3><p id="info-target">มือใหม่เพิ่งเริ่มดูดาว, เน้นส่องดวงจันทร์และดาวเคราะห์ชัดๆ</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const data = {
+            refracting: { title: "🔭 1. กล้องโทรทรรศน์ชนิดหักเหแสง", type: "earth", badge: "ใช้งานบนพื้นโลก 🌍", principle: "ใช้ <span class='highlight'>เลนส์นูน</span> เป็นเลนส์วัตถุ ทำหน้าที่รวมแสงให้ไปตกที่จุดโฟกัส จากนั้นใช้เลนส์ตาขยายภาพ", pros: "ภาพคมชัดและมีคอนทราสต์สูงมาก ไม่มีกระจกมาบังแสง ระบบปิดฝุ่นไม่เข้า", cons: "เกิดความคลาดสี (เห็นขอบรุ้ง) หากต้องการหน้ากล้องใหญ่ กล้องจะยาวและหนัก", price: "หลักพันต้นๆ ถึงแสนบาท <span class='highlight'>บำรุงรักษาต่ำมาก</span> แทบไม่ต้องทำอะไรเลย", target: "มือใหม่, คนชอบดูดวงจันทร์และดาวเคราะห์, สายถ่ายภาพเน้นความคมชัด" },
+            reflecting: { title: "🪞 2. กล้องโทรทรรศน์ชนิดสะท้อนแสง", type: "earth", badge: "ใช้งานบนพื้นโลก 🌍", principle: "ใช้ <span class='highlight'>กระจกเว้า</span> รับแสงแล้วสะท้อนไปที่กระจกเงาราบด้านหน้า ก่อนสะท้อนออกด้านข้างเข้าตา", pros: "ไม่มีปัญหาขอบภาพสีรุ้ง 100% ราคาถูกเมื่อเทียบกับขนาดหน้ากล้อง", cons: "ระบบเปิดทำให้ฝุ่นเข้าง่าย ภาพขอบอาจบิดเบี้ยว", price: "เริ่มต้นหลักพันกลางๆ <span class='highlight'>ต้องบำรุงรักษาบ่อย</span> (ต้องตั้งศูนย์กระจกใหม่เรื่อยๆ)", target: "คนที่ต้องการความคุ้มค่า, สายส่อง Deep-sky (กาแล็กซี, เนบิวลา)" },
+            catadioptric: { title: "🔄 3. กล้องโทรทรรศน์ชนิดผสม", type: "earth", badge: "ใช้งานบนพื้นโลก 🌍", principle: "รวมร่างเลนส์และกระจก แสงผ่าน <span class='highlight'>เลนส์ปรับแก้</span> หน้ากล้อง ไปสะท้อนกระจกเว้าด้านหลัง แล้วพุ่งกลับมาออกเลนส์ตา", pros: "ตัวกล้องสั้นกะทัดรัด พกพาง่ายมาก เป็นกล้องอเนกประสงค์ดูได้ทุกอย่าง", cons: "กระจกตรงกลางบังแสงนิดหน่อย ทำให้คอนทราสต์ลดลง และต้องรอปรับอุณหภูมินาน", price: "ราคาสูง (หลักหมื่นถึงแสน) บำรุงรักษาปานกลาง", target: "นักดูดาวจริงจัง, คนที่อยากได้กล้องโหดๆ แต่แพ็คใส่รถง่ายๆ" },
+            radio: { title: "📡 4. กล้องโทรทรรศน์วิทยุ", type: "space", badge: "งานวิจัยระดับชาติ 🏢", principle: "ใช้ <span class='highlight'>จานรับสัญญาณขนาดใหญ่</span> รับคลื่นวิทยุจากอวกาศ แล้วแปลงเป็นสัญญาณไฟฟ้าเพื่อสร้างภาพ", pros: "ใช้ได้ 24 ชั่วโมงทั้งวันทั้งคืน ทะลุฝุ่น เมฆ และแก๊สในอวกาศได้สบายๆ", cons: "ต้องสร้างจานที่ใหญ่ระดับสิบหรือร้อยเมตร สัญญาณวิทยุบนโลกกวนได้ง่าย", price: "หลายร้อยถึงหมื่นล้านบาท ต้องใช้ทีมวิศวกรดูแล", target: "นักดาราศาสตร์ฟิสิกส์, สถาบันวิจัยระดับประเทศ (ไม่ใช่ของเล่นทั่วไป!)" },
+            space: { title: "🛰️ 5. กล้องโทรทรรศน์อวกาศ", type: "space", badge: "ปฏิบัติการนอกโลก 🌌", principle: "ยิงดาวเทียมติดกล้อง <span class='highlight'>ขึ้นไปโคจรนอกชั้นบรรยากาศโลก</span> รับแสงจากดวงดาวและส่งข้อมูลดิจิทัลกลับมายังสถานีภาคพื้นดิน", pros: "ภาพชัดสุดขีด ไม่มีเมฆหรือชั้นบรรยากาศโลกมาบัง รับแสงย่านอินฟราเรด/UV ได้เต็มๆ", cons: "จำกัดน้ำหนักตอนส่งขึ้นไป ถ้าพังคือจบเกม (ซ่อมแทบไม่ได้)", price: "ระดับแสนล้านบาท (เช่น JWST)", target: "นักวิทยาศาสตร์และองค์กรอวกาศระดับโลก (NASA, ESA)" },
+            chandra: { title: "⚛️ 6. กล้องโทรทรรศน์อวกาศจันทรา", type: "space", badge: "รังสีเอกซ์ (X-Ray) ☢️", principle: "ใช้กระจกทรงกระบอกซ้อนกัน ให้รังสีเอกซ์ <span class='highlight'>พุ่งเข้าช่องตรงกลางและตกกระทบในมุมเอียงมากๆ (แฉลบ)</span> เหมือนการปาหินแฉลบผิวน้ำ เพื่อรวมแสงไปที่ตัวรับสัญญาณ", pros: "ถ่ายภาพรังสีเอกซ์ชัดที่สุดในโลก! เอาไว้ดูของร้อนจัดๆ เช่น ขอบหลุมดำ, ซากซูเปอร์โนวา", cons: "มุมมองแคบมาก ถ่ายแสงปกติ (ที่ตาเห็น) ไม่ได้ และต้องอยู่บนอวกาศเท่านั้น", price: "ประมาณ 1.5 พันล้านดอลลาร์สหรัฐ <span class='highlight'>ซ่อมไม่ได้</span> ตอนนี้เครื่องเริ่มเสื่อมสภาพแล้ว", target: "นักฟิสิกส์ดาราศาสตร์พลังงานสูง (High-energy astrophysicists)" }
+        };
+
+        function selectTelescope(btnElement, id) {
+            document.querySelectorAll('.menu-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            document.querySelectorAll('.sim-view svg').forEach(svg => svg.classList.remove('active'));
+            document.getElementById('svg-' + id).classList.add('active');
+
+            const info = data[id];
+            document.getElementById('info-title').innerHTML = info.title;
+            document.getElementById('info-principle').innerHTML = info.principle;
+            document.getElementById('info-pros').innerHTML = info.pros;
+            document.getElementById('info-cons').innerHTML = info.cons;
+            document.getElementById('info-price').innerHTML = info.price;
+            document.getElementById('info-target').innerHTML = info.target;
+
+            const badge = document.getElementById('info-badge');
+            badge.className = info.type === 'earth' ? 'badge-tag tag-earth' : 'badge-tag tag-space';
+            badge.innerHTML = info.badge;
+            
+            const activeSvg = document.getElementById('svg-' + id);
+            const animatedRays = activeSvg.querySelectorAll('.anim-flow, .anim-flow-fast, .radio-pulse');
+            animatedRays.forEach(el => { el.style.animation = 'none'; el.offsetHeight; el.style.animation = null; });
+        }
+    </script>
+</body>
+</html>
